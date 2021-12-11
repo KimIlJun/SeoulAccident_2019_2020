@@ -1,0 +1,456 @@
+---
+title: "SeoulAccident_2019_2020"
+author: "KIM"
+date: '2021 12 12 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl) ## 엑셀파일 읽기위한 라이브러리
+library(dplyr)  ## 데이터 전처리를 쉽게 하기 위한 라이브러리
+library(plyr)   ## 행,렬 이름변경을 쉽게 하기 위한 라이브러리
+library(lubridate) ## 날짜데이터를 쉽게 전처리 하기위한 라이브러리
+library(corrplot)  ## 상관 관계의 시각화 그래프
+library(ggplot2)   ## ggplot 그래프
+library(forecast) ##시계열데이터를 이용한 예측을 위한 라이브러리
+library(xts)      ##Decompose
+```
+
+```{r}
+##Excel File
+setwd("C:/R")
+x20<-read_excel("2020.xlsx", 1);
+x19<-read_excel("2019.xlsx", 1);
+```
+
+```{r}
+## 우선 초기 데이터에서 우리가 필요한 열들을 구분하고 그 중에서 우리가 코딩을 할 수 있게 전처리하는 과정을 거쳤다. 날짜 데이터 같은 경우에는 문자로 되어 있고 월과 일에 따라 자릿수가 달랐기 때문에 그에 맞춰 짜르는 등 다르게 뽑았고 as.data 해줬다. 사고유형, 도로형태, 요일 같은 경우에는 필요한 글자들만 뽑는 전처리를 하였다. 
+```
+
+##19년도 데이터 전처리
+```{r}
+date_2019<-x19$"사고일시"
+Accident_year_2019 <- substr(date_2019, 1, 4) 
+## 년도
+Accident_year_2019 <- as.integer(Accident_year_2019)
+
+month1_2019<-substr(x19[1:28706, ]$"사고일시", 7, 7) 
+## 사고 월(~9월)
+month2_2019<-substr(x19[28707:39258, ]$"사고일시", 7, 8) 
+## 월(10월~12월)
+
+##날짜 데이터를 YYYY-MM-DD 로 변환 
+Accident_month_2019<-c(month1_2019, month2_2019) ## 사고 월
+Accident_month_2019 <- as.integer(Accident_month_2019)
+
+Accident_day_2019<-substr(date_2019, nchar(date_2019)-6, nchar(date_2019)-5) 
+Accident_day_2019<-as.integer(Accident_day_2019)
+
+Accident_Time_2019<-substr(date_2019, nchar(date_2019)-2, nchar(date_2019)-1) ## 사고시
+Accident_Time_2019 <- as.integer(Accident_Time_2019)
+
+Seoul_Contents_2019<-x19$"사고내용"
+
+Accident_date_2019<-paste(Accident_year_2019, Accident_month_2019,Accident_day_2019, sep="-" )
+
+Accident_date_2019<-as.Date(Accident_date_2019)
+
+Seoul_Damage_2019 <-x19$"피해운전자 차종"
+Seoul_Offender_2019<-x19$"가해운전자 차종"
+
+x2019 <- data.frame(Accident_date_2019, Accident_month_2019,
+                    Accident_Time_2019, Seoul_Contents_2019, 
+                    Seoul_Damage_2019, Seoul_Offender_2019)
+```
+
+##20년도 데이터 전처리
+```{r}
+date_2020<-x20$"사고일시"
+Accident_year_2020 <- substr(date_2020, 1, 4) 
+## 년도
+Accident_year_2020 <- as.integer(Accident_year_2020)
+
+month1_2020<-substr(x20[1:26479, ]$"사고일시", 7, 7) 
+## 사고 월(~9월)
+month2_2020<-substr(x20[26480:35227, ]$"사고일시", 7, 8) 
+## 월(10월~12월)
+
+##날짜 데이터를 YYYY-MM-DD 로 변환 
+Accident_month_2020<-c(month1_2020, month2_2020) ## 사고 월
+Accident_month_2020 <- as.integer(Accident_month_2020)
+
+Accident_day_2020<-substr(date_2020, nchar(date_2020)-6, nchar(date_2020)-5) 
+Accident_day_2020<-as.integer(Accident_day_2020)
+
+Accident_Time_2020<-substr(date_2020, nchar(date_2020)-2, nchar(date_2020)-1) ## 사고시
+Accident_Time_2020 <- as.integer(Accident_Time_2020)
+
+Seoul_Contents_2020<-x20$"사고내용"
+
+Accident_date_2020<-paste(Accident_year_2020, Accident_month_2020,Accident_day_2020, sep="-" )
+
+Accident_date_2020<-as.Date(Accident_date_2020)
+
+Seoul_Damage_2020 <-x20$"피해운전자 차종"
+Seoul_Offender_2020<-x20$"가해운전자 차종"
+
+x2020 <- data.frame(Accident_date_2020, Accident_month_2020,
+                    Accident_Time_2020, Seoul_Contents_2020, 
+                    Seoul_Damage_2020, Seoul_Offender_2020)
+```
+
+
+
+## 2019년 pie 그래프
+```{r}
+pie(table(x2019$Accident_month_2019), main="사고 월") ## 사고 월
+pie(table(x2019$Accident_Time_2019), main="사고시간") ## 사고시간
+pie(table(x2019$Seoul_Contents_2019), main="사고내용") ## 사고내용
+pie(table(x2019$Seoul_Damage_2019), main="피해운전자 차종") ## 피해운전자 차종
+pie(table(x2019$Seoul_Offender_2019), main="가해운전자 차종") ## 가해운전자 차종
+## pie 그래프를 통해 각각의 비율 확인
+```
+
+## 2020년 pie 그래프
+```{r}
+pie(table(x2020$Accident_month_2020), main="사고 월") ## 사고 월
+pie(table(x2020$Accident_Time_2020), main="사고시간") ## 사고시간
+pie(table(x2020$Seoul_Contents_2020), main="사고내용") ## 사고내용
+pie(table(x2020$Seoul_Damage_2020), main="피해운전자 차종") ## 피해운전자 차종
+pie(table(x2020$Seoul_Offender_2020), main="가해운전자 차종") ## 가해운전자 차종
+## pie 그래프를 통해 각각의 비율 확인
+```
+
+
+## 2019년도 사망,중상사고와 전체 사고의 선형 관계 분석.
+```{r}
+Accident_severe_2019 <-x2019 %>% filter(Seoul_Contents_2019=="사망사고" | Seoul_Contents_2019=="중상사고") %>% select(Accident_date_2019, Seoul_Contents_2019)
+
+total_2019<-ddply(x2019, .(Accident_date_2019), nrow)
+severe_2019<-ddply(Accident_severe_2019, .(Accident_date_2019), nrow)
+
+total_2019<-rename(total_2019, c("Accident_date_2019"="date", "V1"="Accident_Total_2019"))
+severe_2019<-rename(severe_2019, c("Accident_date_2019"="date", "V1"="Accident_Severe_2019"))
+
+Total_Severe_2019 = merge(total_2019, severe_2019, by='date')
+Total_Severe_2019$month = as.factor(month(Total_Severe_2019$date))
+
+A2019 <-with(Total_Severe_2019, lm(Accident_Severe_2019~Accident_Total_2019))
+summary(A2019)
+plot(A2019)
+anova(A2019)
+
+## y=0.78075+0.24701*x
+```
+## 2020년도 사망,중상사고와 전체 사고의 선형 관계 분석.
+```{r}
+Accident_severe_2020<-x2020 %>% filter(Seoul_Contents_2020=="사망사고" | Seoul_Contents_2020=="중상사고") %>% select(Accident_date_2020, Seoul_Contents_2020)
+
+total_2020<-ddply(x2020, .(Accident_date_2020), nrow)
+severe_2020<-ddply(Accident_severe_2020, .(Accident_date_2020), nrow)
+
+total_2020<-rename(total_2020, c("Accident_date_2020"="date", "V1"="Accident_Total_2020"))
+severe_2020<-rename(severe_2020, c("Accident_date_2020"="date", "V1"="Accident_Severe_2020"))
+
+Total_Severe_2020 = merge(total_2020, severe_2020, by='date')
+Total_Severe_2020$month = as.factor(month(Total_Severe_2020$date))
+
+A2020 <- with(Total_Severe_2020, lm(Accident_Severe_2020~Accident_Total_2020))
+summary(A2020)
+plot(A2020)
+anova(A2020)
+
+## y=0.74281+0.22898*x
+```
+
+```{r}
+##2020 vs 2019 
+plot(Total_Severe_2019$Accident_Total_2019,Total_Severe_2019$Accident_Severe_2019, xlim=c(0,200), ylim =c(0,40),col="skyblue",xlab="전체 사고", ylab="사망, 중상",pch=16,cex=0.6)
+m19 <- lm(Total_Severe_2019$Accident_Severe_2019~Total_Severe_2019$Accident_Total_2019)
+legend("right",legend=c("19년도Data","20년도Data","19년도 회귀직선","20년도 회귀직선"),fill=c("skyblue","#ff7f50","Red","Blue"),cex=0.7,box.lty=0)
+par(new=T)
+plot(Total_Severe_2020$Accident_Total_2020,Total_Severe_2020$Accident_Severe_2020, xlim=c(0,200), ylim =c(0,40), col="#ff7f50",xlab=" ", ylab=" ",pch=16,cex=0.6,main="사망,중상사고와 전체 사고의 선형 관계 분석")
+m20 <- lm(Total_Severe_2020$Accident_Severe_2020~Total_Severe_2020$Accident_Total_2020)
+abline(m19,col="Red",lwd=1.5)
+abline(m20,col="Blue",lwd=1.5)
+```
+
+##19년도 이륜차와 사망, 중상사고의 선형 관계 분석.
+```{r}
+Accident_bike_2019<-x2019 %>% filter(Seoul_Damage_2019=="이륜" | Seoul_Offender_2019=="이륜")  %>% select(Accident_date_2019, Seoul_Contents_2019)
+Accident_severe_2019<-x2019 %>% filter(Seoul_Contents_2019=="사망사고" | Seoul_Contents_2019=="중상사고") %>% select(Accident_date_2019, Seoul_Contents_2019)
+
+bike_2019<-ddply(Accident_bike_2019, .(Accident_date_2019), nrow)
+severe_2019<-ddply(Accident_severe_2019, .(Accident_date_2019), nrow)
+
+bike_2019<-plyr::rename(bike_2019, c("Accident_date_2019"="date_2019", "V1"="Accident_Bike_2019"))
+severe_2019<-plyr::rename(severe_2019, c("Accident_date_2019"="date_2019", "V1"="Accident_Severe_2019"))
+
+Bike_Severe_2019 = merge(bike_2019, severe_2019, by='date_2019')
+Bike_Severe_2019$date_2019 = as.factor(Bike_Severe_2019$date_2019)
+
+lm.bike_severe_2019<-with(Bike_Severe_2019, lm(Accident_Severe_2019~Accident_Bike_2019))
+summary(lm.bike_severe_2019)
+## (Accident_Severe_2019)=0.58522*(Accident_Bike_2019)+14.01294
+## 2019년에 이륜차의 교통사고 수가 증가할 때 전체 사고 중 사망, 중상 사고가 증가하였다. 하지만 Intercept와 상관계수를 비교해보았을 때 이륜차 사고가 증가해도 전체 사망, 중상 사고 수에 큰 영향을 미치지 않음을 알 수 있었다.
+```
+
+```{r}
+anova(lm.bike_severe_2019)
+par(mfrow=c(2, 2))
+plot(lm.bike_severe_2019)
+
+ggplot(Bike_Severe_2019, aes(x=Accident_Bike_2019, y=Accident_Severe_2019))+geom_point(size=2)+labs(title="19년도 이륜차와 사망, 중상사고의 선형 관계 분석")+xlab("전체 이륜차 사고수")+ylab("사망, 중상")+geom_smooth(method="lm")
+
+htmap1 <- cor(Bike_Severe_2019[,-1])
+summary(htmap1)
+corrplot(htmap1, order="hclust")
+```
+
+
+
+##20년도 이륜차와 사망, 중상사고의 선형 관계 분석.
+```{r}
+Accident_bike_2020<-x2020 %>% filter(Seoul_Damage_2020=="이륜" | Seoul_Offender_2020=="이륜")  %>% select(Accident_date_2020, Seoul_Contents_2020)
+Accident_severe_2020<-x2020 %>% filter(Seoul_Contents_2020=="사망사고" | Seoul_Contents_2020=="중상사고") %>% select(Accident_date_2020, Seoul_Contents_2020)
+
+bike_2020<-ddply(Accident_bike_2020, .(Accident_date_2020), nrow)
+severe_2020<-ddply(Accident_severe_2020, .(Accident_date_2020), nrow)
+
+bike_2020<-plyr::rename(bike_2020, c("Accident_date_2020"="date_2020", "V1"="Accident_Bike_2020"))
+severe_2020<-plyr::rename(severe_2020, c("Accident_date_2020"="date_2020", "V1"="Accident_Severe_2020"))
+
+Bike_Severe_2020 = merge(bike_2020, severe_2020, by='date_2020')
+##Bike_Severe_2020$date_2020 = as.factor(Bike_Severe$date_2020)
+
+lm.bike_severe_2020<-with(Bike_Severe_2020, lm(Accident_Severe_2020~Accident_Bike_2020))
+summary(lm.bike_severe_2020)
+## (Accident_Severe_2020)=0.42619*(Accident_Bike_2020)+13.07563
+## 2020년에 이륜차의 교통사고 수가 증가할 때 전체 사고 중 사망, 중상 사고가 증가하였다. 하지만 Intercept와 상관계수를 비교해보았을 때 이륜차 사고가 증가해도 전체 사망, 중상 사고 수에 큰 영향을 미치지 않음을 알 수 있었다.
+```
+
+```{r}
+anova(lm.bike_severe_2020)
+par(mfrow=c(2, 2))
+plot(lm.bike_severe_2020)
+
+ggplot(Bike_Severe_2020, aes(x=Accident_Bike_2020, y=Accident_Severe_2020))+geom_point(size=2)+labs(title="20년도 이륜차와 사망, 중상사고의 선형 관계 분석")+ xlab("전체 이륜차 사고수")+ylab("사망, 중상")+geom_smooth(method="lm")
+
+htmap2 <- cor(Bike_Severe_2020[,-1])
+summary(htmap2)
+corrplot(htmap2, order="hclust")
+```
+
+##2019년도 이륜차 이외 차종과 사망,중상사고의 선형 관계 분석.
+```{r}
+Accident_nobike_2019<-x2019 %>% filter(Seoul_Damage_2019!="이륜" & Seoul_Offender_2019!="이륜")  %>% select(Accident_date_2019, Seoul_Contents_2019)
+
+nobike_2019<-ddply(Accident_nobike_2019, .(Accident_date_2019), nrow)
+
+nobike_2019<-plyr::rename(nobike_2019, c("Accident_date_2019"="date_2019", "V1"="Accident_noBike_2019"))
+
+Nobike_Severe_2019 = merge(severe_2019, nobike_2019, by='date_2019')
+Nobike_Severe_2019$date_2019 = as.factor(Nobike_Severe_2019$date_2019)
+
+lm.nobike_severe_2019<-with(Nobike_Severe_2019, lm(Accident_Severe_2019~Accident_noBike_2019))
+summary(lm.nobike_severe_2019)
+## Accident_Severe_2019=0.29229*(Accident_noBike_2019)+3.37470
+## 2019년에 이륜차 이외 차종의 교통사고 수가 증가할 때 전체 사고 중 사망, 중상 사고가 증가하였다. 2019년에 이륜차 교통사고 수보다 이륜차 이외 차종의 교통사고 수가 더 큰 영향을 미쳤다.
+```
+
+```{r}
+anova(lm.nobike_severe_2019)
+par(mfrow=c(2, 2))
+plot(lm.nobike_severe_2019)
+
+ggplot(Nobike_Severe_2019, aes(x=Accident_noBike_2019, y=Accident_Severe_2019))+geom_point(size=2)+labs(title="19년도 이륜차 이외 차종과 사망,중상사고의 선형 관계 분석")+ xlab("전체 이륜차 이외 사고수")+ylab("사망, 중상")+geom_smooth(method="lm")
+```
+##2020년도 이륜차 이외 차종과 사망,중상사고의 선형 관계 분석.
+```{r}
+Accident_nobike_2020<-x2020 %>% filter(Seoul_Damage_2020!="이륜" & Seoul_Offender_2020!="이륜")  %>% select(Accident_date_2020, Seoul_Contents_2020)
+
+nobike_2020<-ddply(Accident_nobike_2020, .(Accident_date_2020), nrow)
+
+nobike_2020<-plyr::rename(nobike_2020, c("Accident_date_2020"="date_2020", "V1"="Accident_noBike_2020"))
+
+Nobike_Severe_2020 = merge(severe_2020, nobike_2020, by='date_2020')
+Nobike_Severe_2020$date_2020 = as.factor(Nobike_Severe_2020$date_2020)
+
+lm.nobike_severe_2020<-with(Nobike_Severe_2020, lm(Accident_Severe_2020~Accident_noBike_2020))
+summary(lm.nobike_severe_2020)
+## (Accident_Severe_2020)=0.26890*(Accident_noBike_2020)+3.63505
+## 2020년에 이륜차 이외 차종의 교통사고 수가 증가할 때 전체 사고 중 사망, 중상 사고가 증가하였다. 2020년에 이륜차 교통사고 수보다 이륜차 이외 차종의 교통사고 수가 더 큰 영향을 미쳤다.
+```
+
+```{r}
+anova(lm.nobike_severe_2020)
+par(mfrow=c(2, 2))
+plot(lm.nobike_severe_2020)
+
+ggplot(Nobike_Severe_2020, aes(x=Accident_noBike_2020, y=Accident_Severe_2020))+geom_point(size=2)+labs(title="20년도 이륜차 이외 차종과 사망,중상사고의 선형 관계 분석")+ xlab("전체 이륜차 이외 사고수")+ylab("사망, 중상")+geom_smooth(method="lm")
+```
+
+##19년도 시간대별 사고량
+```{r}
+Accident_Time_2019_1<-x2019 %>% filter( Accident_Time_2019 < 6) %>% select(Accident_date_2019, Accident_Time_2019) 
+Accident_Time_2019_2<-x2019 %>% filter(Accident_Time_2019 >= 6 & Accident_Time_2019 < 12) %>% select(Accident_date_2019, Accident_Time_2019)
+Accident_Time_2019_3<-x2019 %>% filter(Accident_Time_2019 >= 12 & Accident_Time_2019 < 18) %>% select(Accident_date_2019, Accident_Time_2019)
+Accident_Time_2019_4<-x2019 %>% filter(Accident_Time_2019 >=18) %>% select(Accident_date_2019, Accident_Time_2019)
+
+
+Time_2019_1<-ddply(Accident_Time_2019_1, .(Accident_date_2019), nrow)
+Time_2019_2<-ddply(Accident_Time_2019_2, .(Accident_date_2019), nrow)
+Time_2019_3<-ddply(Accident_Time_2019_3, .(Accident_date_2019), nrow)
+Time_2019_4<-ddply(Accident_Time_2019_4, .(Accident_date_2019), nrow)
+
+Time_2019_1<-plyr::rename(Time_2019_1, c("Accident_date_2019"="date_2019", "V1"="Accident_Time_2019_1"))
+Time_2019_2<-plyr::rename(Time_2019_2, c("Accident_date_2019"="date_2019", "V1"="Accident_Time_2019_2"))
+Time_2019_3<-plyr::rename(Time_2019_3, c("Accident_date_2019"="date_2019", "V1"="Accident_Time_2019_3"))
+Time_2019_4<-plyr::rename(Time_2019_4, c("Accident_date_2019"="date_2019", "V1"="Accident_Time_2019_4"))
+
+
+Time_Severe_2019_1 = merge(severe_2019, Time_2019_1, by='date_2019')
+Time_Severe_2019_2 = merge(Time_Severe_2019_1, Time_2019_2, by='date_2019')
+Time_Severe_2019_3 = merge(Time_Severe_2019_2, Time_2019_3,  by='date_2019')
+Time_Severe_2019 = merge(Time_Severe_2019_3, Time_2019_4, by="date_2019")
+Time_Severe_2019$date_2019 = as.factor(Time_Severe_2019$date_2019)
+
+lm.time_severe_2019<-with(Time_Severe_2019, lm(Accident_Severe_2019~Accident_Time_2019_1+Accident_Time_2019_2+Accident_Time_2019_3+Accident_Time_2019_4))
+summary(lm.time_severe_2019)
+anova(lm.time_severe_2019)
+
+## 2019년에 새벽 시간대인 0시~6시에서 교통사고는 가장 적게 일어났으나 상관계수 값이 06시~12시에 이어 두 번째로 커, 12시~18시와 18시~24시보다 심각한 사고에 큰 영향을 미친다.
+```
+
+##20년도 시간대별 사고량
+```{r}
+Accident_Time_2020_1<-x2020 %>% filter(Accident_Time_2020 < 6) %>% select(Accident_date_2020, Accident_Time_2020) 
+Accident_Time_2020_2<-x2020 %>% filter(Accident_Time_2020 >= 6 & Accident_Time_2020 < 12) %>% select(Accident_date_2020, Accident_Time_2020)
+Accident_Time_2020_3<-x2020 %>% filter(Accident_Time_2020 >= 12 & Accident_Time_2020 < 18) %>% select(Accident_date_2020, Accident_Time_2020)
+Accident_Time_2020_4<-x2020 %>% filter(Accident_Time_2020 >= 18 ) %>% select(Accident_date_2020, Accident_Time_2020)
+
+
+Time_2020_1<-ddply(Accident_Time_2020_1, .(Accident_date_2020), nrow)
+Time_2020_2<-ddply(Accident_Time_2020_2, .(Accident_date_2020), nrow)
+Time_2020_3<-ddply(Accident_Time_2020_3, .(Accident_date_2020), nrow)
+Time_2020_4<-ddply(Accident_Time_2020_4, .(Accident_date_2020), nrow)
+
+Time_2020_1<-plyr::rename(Time_2020_1, c("Accident_date_2020"="date_2020", "V1"="Accident_Time_2020_1"))
+Time_2020_2<-plyr::rename(Time_2020_2, c("Accident_date_2020"="date_2020", "V1"="Accident_Time_2020_2"))
+Time_2020_3<-plyr::rename(Time_2020_3, c("Accident_date_2020"="date_2020", "V1"="Accident_Time_2020_3"))
+Time_2020_4<-plyr::rename(Time_2020_4, c("Accident_date_2020"="date_2020", "V1"="Accident_Time_2020_4"))
+
+
+Time_Severe_2020_1 = merge(severe_2020, Time_2020_1, by='date_2020')
+Time_Severe_2020_2 = merge(Time_Severe_2020_1, Time_2020_2, by='date_2020')
+Time_Severe_2020_3 = merge(Time_Severe_2020_2, Time_2020_3,  by='date_2020')
+Time_Severe_2020 = merge(Time_Severe_2020_3, Time_2020_4, by='date_2020')
+Time_Severe_2020$date_2020 = as.factor(Time_Severe_2020$date_2020)
+
+lm.time_severe_2020<-with(Time_Severe_2020, lm(Accident_Severe_2020~Accident_Time_2020_1+Accident_Time_2020_2+Accident_Time_2020_3+Accident_Time_2020_4))
+summary(lm.time_severe_2020)
+anova(lm.time_severe_2020)
+
+## 2020년에 새벽 시간대인 0시~6시에서 교통사고는 가장 적게 일어났으나 상관계수 값이 06시~12시에 이어 두 번째로 커, 12시~18시와 18시~24시보다 심각한 사고에 큰 영향을 미친다.
+```
+
+```{r}
+Accident_Time_2019_Sum <- c(sum(Time_2019_1[, 2]), sum(Time_2019_2[, 2]), sum(Time_2019_3[, 2]), sum(Time_2019_4[, 2]))
+lbls <- c("00-06시", "06-12시", "12-18시","18-24시")
+pct<-round(Accident_Time_2019_Sum/sum(Accident_Time_2019_Sum)*100)
+pct<-paste(pct, "%", sep="")
+Accident_Time_2019_lbls<-paste(lbls, pct, sep=" ")
+pie(Accident_Time_2019_Sum, labels=Accident_Time_2019_lbls, init.angle=44, main="19년도 시간대별 교통사고")
+```
+
+```{r}
+Accident_time.severe_2019 <-x2019 %>% filter(Seoul_Contents_2019=="사망사고" | Seoul_Contents_2019=="중상사고") %>% select(Accident_date_2019, Seoul_Contents_2019, Accident_Time_2019)
+
+Accident_Time.Severe_2019_1<-Accident_time.severe_2019 %>% filter( Accident_Time_2019 < 6) %>% select(Accident_date_2019, Accident_Time_2019) 
+Accident_Time.Severe_2019_2<-Accident_time.severe_2019 %>% filter(Accident_Time_2019 >= 6 & Accident_Time_2019 < 12) %>% select(Accident_date_2019, Accident_Time_2019)
+Accident_Time.Severe_2019_3<-Accident_time.severe_2019 %>% filter(Accident_Time_2019 >= 12 & Accident_Time_2019 < 18) %>% select(Accident_date_2019, Accident_Time_2019)
+Accident_Time.Severe_2019_4<-Accident_time.severe_2019 %>% filter(Accident_Time_2019 >=18) %>% select(Accident_date_2019, Accident_Time_2019)
+
+Time.Severe_2019_1<-ddply(Accident_Time.Severe_2019_1, .(Accident_date_2019), nrow)
+Time.Severe_2019_2<-ddply(Accident_Time.Severe_2019_2, .(Accident_date_2019), nrow)
+Time.Severe_2019_3<-ddply(Accident_Time.Severe_2019_3, .(Accident_date_2019), nrow)
+Time.Severe_2019_4<-ddply(Accident_Time.Severe_2019_4, .(Accident_date_2019), nrow)
+
+
+Accident_Time.Severe_2019_Sum <- c(sum(Time.Severe_2019_1[, 2]), sum(Time.Severe_2019_2[, 2]), sum(Time.Severe_2019_3[, 2]), sum(Time.Severe_2019_4[, 2]))
+lbls <- c("00-06시", "06-12시", "12-18시","18-24시")
+pct<-round(Accident_Time.Severe_2019_Sum/sum(Accident_Time.Severe_2019_Sum)*100)
+pct<-paste(pct, "%", sep="")
+Accident_Time.Severe_2019_lbls<-paste(lbls, pct, sep=" ")
+pie(Accident_Time.Severe_2019_Sum, labels=Accident_Time.Severe_2019_lbls, init.angle=36.5, main="19년도 시간대별 사망, 중상 사고")
+```
+
+
+```{r}
+Accident_Time_2020_Sum <- c(sum(Time_2020_1[, 2]), sum(Time_2020_2[, 2]), sum(Time_2020_3[, 2]), sum(Time_2020_4[, 2]))
+lbls <- c("00-06시", "06-12시", "12-18시","18-24시")
+pct<-round(Accident_Time_2020_Sum/sum(Accident_Time_2020_Sum)*100)
+pct<-paste(pct, "%", sep="")
+Accident_Time_2020_lbls<-paste(lbls, pct, sep=" ")
+pie(Accident_Time_2020_Sum, labels=Accident_Time_2020_lbls, init.angle=49, main="20년도 시간대별 교통사고")
+```
+
+```{r}
+Accident_time.severe_2020 <-x2020 %>% filter(Seoul_Contents_2020=="사망사고" | Seoul_Contents_2020=="중상사고") %>% select(Accident_date_2020, Seoul_Contents_2020, Accident_Time_2020)
+
+Accident_Time.severe_2020_1<-Accident_time.severe_2020 %>% filter(Accident_Time_2020 < 6) %>% select(Accident_date_2020, Accident_Time_2020) 
+Accident_Time.severe_2020_2<-Accident_time.severe_2020 %>% filter(Accident_Time_2020 >= 6 & Accident_Time_2020 < 12) %>% select(Accident_date_2020, Accident_Time_2020)
+Accident_Time.severe_2020_3<-Accident_time.severe_2020 %>% filter(Accident_Time_2020 >= 12 & Accident_Time_2020 < 18) %>% select(Accident_date_2020, Accident_Time_2020)
+Accident_Time.severe_2020_4<-Accident_time.severe_2020 %>% filter(Accident_Time_2020 >= 18 ) %>% select(Accident_date_2020, Accident_Time_2020)
+
+Time.Severe_2020_1<-ddply(Accident_Time.severe_2020_1, .(Accident_date_2020), nrow)
+Time.Severe_2020_2<-ddply(Accident_Time.severe_2020_2, .(Accident_date_2020), nrow)
+Time.Severe_2020_3<-ddply(Accident_Time.severe_2020_3, .(Accident_date_2020), nrow)
+Time.Severe_2020_4<-ddply(Accident_Time.severe_2020_4, .(Accident_date_2020), nrow)
+
+Accident_Time.Severe_2020_Sum <- c(sum(Time.Severe_2020_1[, 2]), sum(Time.Severe_2020_2[, 2]), sum(Time.Severe_2020_3[, 2]), sum(Time.Severe_2020_4[, 2]))
+lbls <- c("00-06시", "06-12시", "12-18시","18-24시")
+pct<-round(Accident_Time.Severe_2020_Sum/sum(Accident_Time.Severe_2020_Sum)*100)
+pct<-paste(pct, "%", sep="")
+Accident_Time.Severe_2020_lbls<-paste(lbls, pct, sep=" ")
+pie(Accident_Time_2020_Sum, labels=Accident_Time.Severe_2020_lbls, init.angle=49, main="20년도 시간대별 사망, 중상 사고")
+```
+
+
+
+## 시계열 데이터 분석
+```{r}
+df1 <- data.frame(dplyr::count(x2020, Accident_date_2020))
+df2 <- data.frame(dplyr::count(x2019, Accident_date_2019))
+
+names(df1) = names(df2)
+
+Accident_count <- rbind(df2, df1)
+```
+
+```{r}
+##시계열 데이터 생성성
+Accident_ts <-ts(Accident_count[,-1] ,start = c(2019,01),end = c(2021,01), frequency =365.5)
+class(Accident_ts)  ##시계열 데이터 확인
+start(Accident_ts)  ##시작일 확인 2019
+end(Accident_ts)    ##끝나는일 확인 2021.0 =2020년 12.31 까지
+str(Accident_ts)
+par(mfrow=c(1,1))
+summary(Accident_ts)
+ts.plot(Accident_ts, ylab="일별 사고 수")
+abline(reg= lm(Accident_ts~time(Accident_ts)))
+plot(decompose(Accident_ts)) ## 6개월을 기준으로 시계열 데이터를 분해(관측치, trend, 계졀성, random)
+## 데이터가 적어 초반 6개월과 후반 6개월에 결측이 발생하였다.
+```
+
+```{r}
+## 원래 데이터에 결측이 있는 것이 아니라 ARIMA에서는 그대로 진행하였다.
+auto.arima(Accident_ts)
+Accident2019_2020 <- arima(Accident_ts, order=c(1,1,2))
+Accident_forecast <- forecast(Accident2019_2020)
+plot(Accident_forecast, ylab="일별 사고 수", main="ARIMA 모델을 이용한 교통 사고량 예측")
+```
